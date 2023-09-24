@@ -17,18 +17,20 @@ class UserAdmin(BaseUserAdmin):
 
     fieldsets = [
         (None, {'fields': ('email', 'password')}),
-        (_("Permissions"), { 'fields': ('is_staff', 'is_active', 'is_superuser') }),
-        (_("Logins"), { 'fields': ('last_login',) }),
+        (_("Permissions"), {'fields': ('is_staff',
+         'is_active', 'is_superuser')}),
+        (_("Logins"), {'fields': ('last_login',)}),
     ]
 
     readonly_fields = ['last_login']
 
     add_fieldsets = [
         (None, {
-            'classes' : ('wide', 'extrapretty', 'extravolant'),
+            'classes': ('wide', 'extrapretty', 'extravolant'),
             'fields': ('name', 'email', 'password1', 'password2')
         }),
-        (_("Permissions"), { 'fields': ('is_staff', 'is_active', 'is_superuser') }),
+        (_("Permissions"), {'fields': ('is_staff', 'is_active',
+         'is_superuser')}),
     ]
 
 
