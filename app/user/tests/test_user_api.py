@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 
 CREATE_USER_URL = reverse('user:create')
 CREATE_TOKEN = reverse('user:token')
+GET_ME_URL = reverse('user:me')
 
 USER_CREATE_PAYLOAD = {
         'email': 'test@example.com',
@@ -60,6 +61,53 @@ class PublicUserApiTests(TestCase):
         user_exists = get_user_model().objects.filter(
             email=USER_CREATE_PAYLOAD['email']).exists()
         self.assertFalse(user_exists)
+
+    def test_get_user_unauthorized(self):
+        """ Test that authentication is required to get user detial """
+
+        res = self.client.get(GET_ME_URL)
+
+        print(res.data)
+
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PrivateUserApiTests(TestCase):
+    """ Test API requests that require authentication """
+
+    def setUp(self):
+        self.user = create_user(**USER_CREATE_PAYLOAD)
+        self.client = APIClient()
+
+        self.client.force_authenticate(user=self.user)
+
+    def test_get_profile_success(self):
+        """ Test returns user profile for authenticated user """
+
+        res = self.client.get(GET_ME_URL)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data, {
+            'email': self.user.email,
+            'name': self.user.name
+        })
+
+    def test_post_method_not_allowed(self):
+        """ Test that POST method is not allowed on the me url """
+        resp = self.client.post(GET_ME_URL, {})
+
+        self.assertEqual(resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_update_user_profile(self):
+        """ Test updating user profile for authenticated user """
+        update_payload = {'name': 'new Name', 'password': 'newpass123'}
+        res = self.client.patch(GET_ME_URL, update_payload)
+
+        self.user.refresh_from_db()
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.user.name, update_payload['name'])
+        self.assertTrue(self.user.check_password(update_payload['password']))
 
 
 class AuthTokenTests(TestCase):
