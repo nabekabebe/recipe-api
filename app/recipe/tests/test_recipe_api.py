@@ -11,7 +11,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Recipe, Tag
+from core.models import Recipe, Tag, Ingredient
 
 from recipe.serializers import (
     RecipeSerializer, RecipeDetailSerializer
@@ -307,3 +307,84 @@ class PrivateRecipeApiTests(TestCase):
             format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(recipe.tags.count(), 0)
+
+    def test_create_recipe_with_ingredients_successful(self):
+        """ Test creating a new recipe with new ingredients successful """
+        payload = {}
+        payload.update(RECIPE_PAYLOAD)
+        payload['ingredients'] = [
+            {'name': 'Lettuce'},
+            {'name': 'Tomato'},
+        ]
+
+        resp = self.client.post(RECIPE_URL, payload, format='json')
+
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        recipes = Recipe.objects.filter(user=self.user)
+        self.assertEqual(len(recipes), 1)
+
+        recipe = recipes[0]
+        self.assertEqual(recipe.ingredients.count(), 2)
+
+        for ingredient in payload['ingredients']:
+            self.assertTrue(
+                Ingredient.objects.filter(user=self.user, **ingredient))
+
+    def test_create_ingredient_on_recipe_update(self):
+        """ Test creating a ingredient on recipe update"""
+
+        payload = {
+            'ingredients': [{'name': 'Lettuce'}]
+        }
+
+        recipe = create_recipe(user=self.user)
+
+        resp = self.client.patch(
+            recipe_detail_url(recipe.id),
+            payload,
+            format='json')
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(recipe.ingredients.count(), 1)
+        ingredient = Ingredient.objects.get(user=self.user, name='Lettuce')
+        self.assertIn(ingredient, recipe.ingredients.all())
+
+    def test_update_recipe_assign_ingredient(self):
+        """Test updating recipe with ingredients replaces recipe ingredients"""
+
+        ingredient1 = Ingredient.objects.create(
+            user=self.user, name='ingredient 1')
+        recipe = create_recipe(user=self.user)
+        recipe.ingredients.add(ingredient1)
+
+        payload = {
+            'ingredients': [
+                {'name': 'new ingredient'}
+            ]
+        }
+
+        resp = self.client.patch(
+            recipe_detail_url(recipe.id),
+            payload,
+            format='json')
+
+        newingredient = Ingredient.objects.get(
+            user=self.user, name='new ingredient')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(recipe.ingredients.count(), 1)
+        self.assertNotIn(ingredient1, recipe.ingredients.all())
+        self.assertIn(newingredient, recipe.ingredients.all())
+
+    def test_clear_recipe_ingredients_with_empty_update(self):
+        """ Test clear recipe ingredients with empty ingredients update"""
+        ingredient1 = Ingredient.objects.create(
+            user=self.user, name='ingredient 1')
+        recipe = create_recipe(user=self.user)
+        recipe.ingredients.add(ingredient1)
+
+        resp = self.client.patch(
+            recipe_detail_url(recipe.id),
+            {'ingredients': []},
+            format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(recipe.ingredients.count(), 0)

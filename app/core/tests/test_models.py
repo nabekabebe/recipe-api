@@ -87,3 +87,15 @@ class ModelTests(TestCase):
 
     #     with self.assertRaises(IntegrityError):
     #         models.Tag.objects.create(user=user, name='Vegan')
+
+    def test_create_ingredient_successful(self):
+        """Test create an ingredient"""
+        user = create_user()
+        models.Ingredient.objects.create(
+            user=user,
+            name='Lettuce'
+        )
+
+        self.assertTrue(
+            models.Ingredient.objects.filter(
+                user=user, name='Lettuce').exists())
