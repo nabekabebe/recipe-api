@@ -1,7 +1,14 @@
 from decimal import Decimal
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+# from django.db.utils import IntegrityError
+
 from core import models
+
+
+def create_user(email='test@example.com', password='testpass123'):
+    """ Create and return a user """
+    return get_user_model().objects.create_user(email=email, password=password)
 
 
 class ModelTests(TestCase):
@@ -10,12 +17,9 @@ class ModelTests(TestCase):
     def test_create_user_with_email_successful(self):
         """ Test creating a new user with an email is successful """
 
-        email = 'test@example.com'
+        email = 'email@exampl.com'
         password = 'testpass123'
-        user = get_user_model().objects.create_user(
-            email=email,
-            password=password
-        )
+        user = create_user(email=email, password=password)
 
         self.assertEqual(user.email, email)
         self.assertTrue(user.check_password(password))
@@ -30,33 +34,22 @@ class ModelTests(TestCase):
             ('test@EXAMPLE.COM', 'test@example.com')
         ]
 
-        password = 'testpass123'
-
         for email, normalized_email in sample_emails:
-            user = get_user_model().objects.create_user(
-                email=email,
-                password=password
-            )
+            user = create_user(email=email)
             self.assertEqual(user.email, normalized_email)
 
     def test_new_user_without_email_raises_error(self):
         """ Test creating user without email raises error """
 
         with self.assertRaises(ValueError):
-            get_user_model().objects.create_user(
-                email=None,
-                password='testpass123'
-            )
+            create_user(email=None)
 
     def test_create_super_user(self):
         """ Test creating a new super user """
 
-        email = 'admin@example.com'
-        password = 'testpass123'
-
         user = get_user_model().objects.create_superuser(
-            email=email,
-            password=password
+            email='admin@example.com',
+            password='admin123'
         )
 
         self.assertTrue(user.is_superuser)
@@ -65,13 +58,7 @@ class ModelTests(TestCase):
     def test_create_recipe_successful(self):
         """ Testing creating a recipe """
 
-        email = 'admin@example.com'
-        password = 'testpass123'
-
-        user = get_user_model().objects.create_superuser(
-            email=email,
-            password=password
-        )
+        user = create_user()
 
         recipe = models.Recipe.objects.create(
             user=user,
@@ -82,3 +69,21 @@ class ModelTests(TestCase):
         )
 
         self.assertEqual(str(recipe), 'Recipe Title')
+
+    def test_create_tag_successful(self):
+        """ Test creating a new tag """
+
+        user = create_user()
+        tag = models.Tag.objects.create(user=user, name='Vegan')
+
+        self.assertEqual(str(tag), 'Vegan')
+
+    # def test_create_tag_with_existing_name_error(self):
+    #     """Test creating a tag with existing name raises error"""
+
+    #     user = create_user()
+
+    #     models.Tag.objects.create(user=user, name='Vegan')
+
+    #     with self.assertRaises(IntegrityError):
+    #         models.Tag.objects.create(user=user, name='Vegan')
