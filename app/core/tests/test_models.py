@@ -1,7 +1,9 @@
 from decimal import Decimal
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from unittest.mock import patch
 # from django.db.utils import IntegrityError
+
 
 from core import models
 
@@ -99,3 +101,13 @@ class ModelTests(TestCase):
         self.assertTrue(
             models.Ingredient.objects.filter(
                 user=user, name='Lettuce').exists())
+
+    @patch('core.models.uuid.uuid4')
+    def test_generate_image_path(self, patched_uuid):
+        """ Test generating unique image path """
+        uuid = 'test-uuid'
+        patched_uuid.return_value = uuid
+
+        file_path = models.generate_image_path(None, 'example.jpg')
+
+        self.assertEqual(file_path, f'uploads/recipe/example_{uuid}.jpg')

@@ -1,7 +1,9 @@
 """
 Test for recipe API
 """
-
+import tempfile
+import os
+from PIL import Image
 from decimal import Decimal
 
 from django.test import TestCase
@@ -32,6 +34,11 @@ RECIPE_PAYLOAD = {
 def recipe_detail_url(recipe_id):
     """ Return recipe detail url """
     return reverse('recipe:recipe-detail', args=[recipe_id])
+
+
+def recipe_image_upload_url(recipe_id):
+    """ Return image upload api endpoint"""
+    return reverse('recipe:recipe-upload-image', args=[recipe_id])
 
 
 def create_recipe(user, **data):
@@ -388,3 +395,48 @@ class PrivateRecipeApiTests(TestCase):
             format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(recipe.ingredients.count(), 0)
+
+
+class ImageUploadApiTests(TestCase):
+    """Test image upload"""
+
+    def setUp(self):
+        self.user = create_user(
+            email='user@example.com',
+            password='testpass123'
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+        self.recipe = create_recipe(user=self.user)
+
+    def tearDown(self):
+        """ Clean up after each test"""
+        self.recipe.image.delete()
+
+    def test_image_upload_successful(self):
+        """ Test image upload functionality"""
+
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as image_file:
+            image = Image.new('RGB', (10, 10))
+            image.save(image_file, format='JPEG')
+            image_file.seek(0)
+
+            url = recipe_image_upload_url(self.recipe.id)
+            payload = {'image': image_file}
+            resp = self.client.post(url, payload, format='multipart')
+
+            self.assertEqual(resp.status_code, status.HTTP_200_OK)
+            self.assertIn('image', resp.data)
+
+        self.recipe.refresh_from_db()
+        self.assertTrue(os.path.exists(self.recipe.image.path))
+
+    def test_wrong_image_format_error(self):
+        """ Test should return error on wong image data passed"""
+
+        url = recipe_image_upload_url(self.recipe.id)
+        payload = {'image': 'notimage'}
+        resp = self.client.post(url, payload, format='multipart')
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)

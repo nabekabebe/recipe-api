@@ -2,6 +2,9 @@
 Database Models
 """
 
+import uuid
+import os
+
 from django.db import models
 from django.contrib.auth.models import (
     AbstractBaseUser,
@@ -9,6 +12,12 @@ from django.contrib.auth.models import (
     BaseUserManager
 )
 from app import settings
+
+
+def generate_image_path(_, filename):
+    """ Generate file path for new recipe image """
+    image_name, ext = os.path.splitext(filename)
+    return f'uploads/recipe/{image_name}_{uuid.uuid4()}{ext}'
 
 
 class UserManager(BaseUserManager):
@@ -64,6 +73,8 @@ class Recipe(models.Model):
 
     tags = models.ManyToManyField('Tag')
     ingredients = models.ManyToManyField('Ingredient')
+
+    image = models.ImageField(null=True, upload_to=generate_image_path)
 
     def __str__(self):
         return self.title
