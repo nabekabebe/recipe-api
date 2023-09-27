@@ -9,7 +9,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Tag
+from core.models import Tag, Recipe
 from recipe.serializers import TagSerializer
 
 
@@ -111,6 +111,53 @@ class PrivateTagApiTests(TestCase):
         resp = self.client.delete(get_tag_detial_url(tag.id))
 
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_filter_tags_by_assigned(self):
+        """Test retrieving tags that are assigned to recipes"""
+
+        recipe = Recipe.objects.create(
+            title='Recipe 1',
+            time_minutes=5,
+            price=5.00,
+            user=self.user,
+            description='Recipe 1 description'
+        )
+
+        tag = create_tag(user=self.user, name='Tag 1')
+        create_tag(user=self.user, name='Tag 2')
+        recipe.tags.add(tag)
+
+        resp = self.client.get(TAG_URL, {'assigned_only': 1})
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data), 1)
+
+    def test_filter_tags_unique(self):
+        """Test filtering tags returns unique items"""
+
+        recipe1 = Recipe.objects.create(
+            title='Recipe 1',
+            time_minutes=5,
+            price=5.00,
+            user=self.user,
+            description='Recipe 1 description'
+        )
+        recipe2 = Recipe.objects.create(
+            title='Recipe 1',
+            time_minutes=5,
+            price=5.00,
+            user=self.user,
+            description='Recipe 1 description'
+        )
+
+        tag = create_tag(user=self.user, name='tag 1')
+        create_tag(user=self.user, name='tag 2')
+        recipe1.tags.add(tag)
+        recipe2.tags.add(tag)
+
+        resp = self.client.get(TAG_URL, {'assigned_only': 1})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data), 1)
 
     # def test_get_other_user_tag_successful(self):
         """ Test retriveing other users tag is possible"""

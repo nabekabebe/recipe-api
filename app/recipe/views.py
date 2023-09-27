@@ -33,12 +33,12 @@ from core.models import (
             OpenApiParameter(
                 'tags',
                 OpenApiTypes.STR,
-                description='Filter recipes by tags'
+                description='Comma separated list of tag IDs'
             ),
             OpenApiParameter(
                 'ingredients',
                 OpenApiTypes.STR,
-                description='Filter recipes by ingredients'
+                description='Comma separated list of ingredient IDs'
             )
         ]
     )
@@ -97,6 +97,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                'assigned_only',
+                OpenApiTypes.INT,
+                enum=[0, 1],
+                description='Filter by assigned items to recipe'
+            )
+        ]
+    )
+)
 class BaseRecipeAttrViewSet(
         mixins.DestroyModelMixin,
         mixins.UpdateModelMixin,
@@ -108,8 +120,12 @@ class BaseRecipeAttrViewSet(
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Retrive tags per authenticated user"""
-        return self.queryset.filter(user=self.request.user).order_by('-name')
+        """Retrive tags/ingredients per authenticated user"""
+        assign_param = self.request.query_params.get('assigned_only', 0)
+        if bool(assign_param):
+            self.queryset = self.queryset.filter(recipe__isnull=False)
+        return self.queryset.filter(
+            user=self.request.user).order_by('-name').distinct()
 
 
 class TagViewSet(BaseRecipeAttrViewSet):
