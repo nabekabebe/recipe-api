@@ -396,6 +396,65 @@ class PrivateRecipeApiTests(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(recipe.ingredients.count(), 0)
 
+    def test_filter_by_tags(self):
+        """ Test filtering recipes by tags"""
+        payload_tags = [{'name': 'Tag 1'}, {'name': 'Tag 2'}]
+        tags = []
+        for tag_payload in payload_tags:
+            tags.append(Tag.objects.create(user=self.user, **tag_payload))
+
+        recipe1 = create_recipe(user=self.user)
+        recipe1.tags.add(tags[0])
+
+        recipe2 = create_recipe(user=self.user, title="second recipe")
+        recipe2.tags.add(tags[1])
+
+        recipe3 = create_recipe(user=self.user, title="no tag recipe")
+
+        params = {'tags': f'{tags[0].id}'}
+        resp = self.client.get(RECIPE_URL, params)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        s1 = RecipeSerializer(recipe1)
+        s2 = RecipeSerializer(recipe2)
+        s3 = RecipeSerializer(recipe3)
+
+        self.assertEqual(len(resp.data), 1)
+        self.assertIn(s1.data, resp.data)
+        self.assertNotIn(s2.data, resp.data)
+        self.assertNotIn(s3.data, resp.data)
+
+    def test_filter_by_ingredients(self):
+        """ Test filtering recipes by ingredients"""
+        payload_ingredients = [
+            {'name': 'ingredient 1'}, {'name': 'ingredient 2'}]
+        ingredients = []
+        for ingredient_payload in payload_ingredients:
+            ingredients.append(
+                Ingredient.objects.create(user=self.user, **ingredient_payload)
+                )
+
+        recipe1 = create_recipe(user=self.user)
+        recipe1.ingredients.add(ingredients[0])
+
+        recipe2 = create_recipe(user=self.user, title="second recipe")
+        recipe2.ingredients.add(ingredients[1])
+
+        recipe3 = create_recipe(user=self.user, title="no ingredient recipe")
+
+        params = {'ingredients': f'{ingredients[0].id}'}
+        resp = self.client.get(RECIPE_URL, params)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        s1 = RecipeSerializer(recipe1)
+        s2 = RecipeSerializer(recipe2)
+        s3 = RecipeSerializer(recipe3)
+
+        self.assertEqual(len(resp.data), 1)
+        self.assertIn(s1.data, resp.data)
+        self.assertNotIn(s2.data, resp.data)
+        self.assertNotIn(s3.data, resp.data)
+
 
 class ImageUploadApiTests(TestCase):
     """Test image upload"""

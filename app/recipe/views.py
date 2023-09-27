@@ -1,6 +1,12 @@
 """
 Recipe api view
 """
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+    OpenApiParameter,
+    OpenApiTypes
+)
 
 from rest_framework import (viewsets, authentication, permissions, mixins)
 from rest_framework.decorators import action
@@ -21,6 +27,22 @@ from core.models import (
 )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                'tags',
+                OpenApiTypes.STR,
+                description='Filter recipes by tags'
+            ),
+            OpenApiParameter(
+                'ingredients',
+                OpenApiTypes.STR,
+                description='Filter recipes by ingredients'
+            )
+        ]
+    )
+)
 class RecipeViewSet(viewsets.ModelViewSet):
     """ Recipe list api view for authenticated users"""
 
@@ -32,7 +54,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Retrive recipes per authenticated user"""
-        return self.queryset.filter(user=self.request.user).order_by('-id')
+        tags_params = self.request.query_params.get('tags', None)
+        ingredients_params = self.request.query_params.get('ingredients', None)
+
+        if tags_params is not None:
+            tags = tags_params.split(',')
+            self.queryset = self.queryset.filter(tags__id__in=tags)
+
+        if ingredients_params is not None:
+            ingredients = ingredients_params.split(',')
+            self.queryset = self.queryset.filter(
+                ingredients__id__in=ingredients)
+
+        return self.queryset.filter(
+            user=self.request.user).order_by('-id').distinct()
 
     def get_serializer_class(self):
         """Get serializer class"""
