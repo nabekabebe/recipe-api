@@ -29,7 +29,8 @@ DEBUG = 'RENDER' not in os.environ      #To be hosted on Render Hosting Service
 
 ALLOWED_HOSTS = []
 allowed_hosts = os.environ.get('ALLOWED_HOSTS')
-ALLOWED_HOSTS.extend(filter(None, allowed_hosts.split(',')))
+if allowed_hosts:
+    ALLOWED_HOSTS.extend(filter(None, allowed_hosts.split(',')))
 
 # Application definition
 
