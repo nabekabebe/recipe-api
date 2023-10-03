@@ -67,8 +67,6 @@ class PublicUserApiTests(TestCase):
 
         res = self.client.get(GET_ME_URL)
 
-        print(res.data)
-
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
